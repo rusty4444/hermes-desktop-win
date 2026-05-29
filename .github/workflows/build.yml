@@ -22,22 +22,27 @@ jobs:
       - name: Build
         id: build
         continue-on-error: true
-        run: dotnet build src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release --no-restore
-
-      - name: Dump XAML errors
-        if: steps.build.outcome == 'failure'
         run: |
-          Write-Host "=== XAML Compiler output.json ==="
-          $outputJson = Get-ChildItem -Path src/HermesDesktop.WinUI/obj -Recurse -Filter "output.json" -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($outputJson) {
-            Get-Content $outputJson.FullName -Raw
-          } else {
-            Write-Host "No output.json found"
-          }
-          
-          Write-Host "=== input.json ==="
-          $inputJson = Get-ChildItem -Path src/HermesDesktop.WinUI/obj -Recurse -Filter "input.json" -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($inputJson) {
-            Get-Content $inputJson.FullName -Raw | Select-Object -First 100
-          }
+          dotnet build src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release --no-restore -v normal 2>&1 > build.log
+          $exitCode = $LASTEXITCODE
+          Write-Host "=== build.log (last 200 lines) ==="
+          Get-Content build.log | Select-Object -Last 200
+          exit $exitCode
         shell: pwsh
+
+      - name: Publish
+        if: steps.build.outcome == 'success'
+        run: dotnet publish src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
+
+      - name: Upload artifact
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: HermesDesktop.WinUI
+          path: publish/
+
+      - name: Upload to Release
+        if: steps.build.outcome == 'success' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: publish/HermesDesktop.WinUI.exe
