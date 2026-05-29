@@ -1,5 +1,4 @@
 using System;
-using Globalization;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Controls;
 

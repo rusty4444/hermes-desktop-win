@@ -1,5 +1,4 @@
 using System;
-using Globalization;
 using Microsoft.UI.Xaml.Data;
 
 namespace HermesDesktop.WinUI.Converters
