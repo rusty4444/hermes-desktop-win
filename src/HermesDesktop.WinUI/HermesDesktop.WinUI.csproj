@@ -7,7 +7,6 @@
     <UseWinUI>true</UseWinUI>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <WindowsSdkPackageVersion>10.0.22621.3233</WindowsSdkPackageVersion>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
