@@ -2,6 +2,8 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using HermesDesktop.WinUI.Models;
 using HermesDesktop.WinUI.Services;
