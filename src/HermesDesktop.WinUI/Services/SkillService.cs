@@ -54,11 +54,11 @@ def get_skills():
                         for line in fm.split('\n'):
                             line = line.strip()
                             if line.startswith('title:'):
-                                title = line[6:].strip().strip('\"').strip(\"'\")
+                                title = line[6:].strip().strip(chr(34)).strip(chr(39))
                             elif line.startswith('name:'):
-                                title = line[5:].strip().strip('\"').strip(\"'\")
+                                title = line[5:].strip().strip(chr(34)).strip(chr(39))
                             elif line.startswith('description:'):
-                                description = line[12:].strip().strip('\"').strip(\"'\")
+                                description = line[12:].strip().strip(chr(34)).strip(chr(39))
 
                 skills.append({
                     'id': filename,
