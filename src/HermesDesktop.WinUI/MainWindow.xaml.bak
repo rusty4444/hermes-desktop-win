@@ -12,41 +12,32 @@
                         IsPaneOpen="True"
                         DisplayModeChanged="NavView_DisplayModeChanged"
                         ItemInvoked="NavView_ItemInvoked"
-                        PaneDisplayMode="Left"
-                        IsSettingsVisible="True">
+                        PaneDisplayMode="Left">
             <NavigationView.MenuItems>
                 <NavigationViewItem x:Name="OverviewItem"
                                     Content="Overview"
-                                    Icon="Home"
-                                    Tag="overview"/>
+                                    Icon="Home"/>
                 <NavigationViewItem x:Name="SessionsItem"
                                     Content="Sessions"
-                                    Icon="Chat"
-                                    Tag="sessions"/>
+                                    Icon="Chat"/>
                 <NavigationViewItem x:Name="WorkflowsItem"
                                     Content="Workflows"
-                                    Icon="Repeat"
-                                    Tag="workflows"/>
+                                    Icon="Repeat"/>
                 <NavigationViewItem x:Name="KanbanItem"
                                     Content="Kanban"
-                                    Icon="Preview"
-                                    Tag="kanban"/>
+                                    Icon="Preview"/>
                 <NavigationViewItem x:Name="FilesItem"
                                     Content="Files"
-                                    Icon="Folder"
-                                    Tag="files"/>
+                                    Icon="Folder"/>
                 <NavigationViewItem x:Name="UsageItem"
                                     Content="Usage"
-                                    Icon="Chart"
-                                    Tag="usage"/>
+                                    Icon="Chart"/>
                 <NavigationViewItem x:Name="SkillsItem"
                                     Content="Skills"
-                                    Icon="Library"
-                                    Tag="skills"/>
+                                    Icon="Library"/>
                 <NavigationViewItem x:Name="TerminalItem"
                                     Content="Terminal"
-                                    Icon="Console"
-                                    Tag="terminal"/>
+                                    Icon="Console"/>
             </NavigationView.MenuItems>
 
             <NavigationView.Content>

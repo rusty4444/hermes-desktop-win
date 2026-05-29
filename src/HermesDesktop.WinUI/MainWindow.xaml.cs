@@ -21,7 +21,7 @@ namespace HermesDesktop.WinUI
         {
             if (args.IsSettingsInvoked)
             {
-                // TODO: Settings page
+                ContentFrame.Navigate(typeof(SettingsView));
                 return;
             }
 

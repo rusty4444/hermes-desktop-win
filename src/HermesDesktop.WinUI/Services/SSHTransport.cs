@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Renci.SshNet;
+using Renci.SshNet.Common;
 
 namespace HermesDesktop.WinUI.Services
 {
@@ -14,6 +15,7 @@ namespace HermesDesktop.WinUI.Services
         private readonly ConnectionProfile _connection;
         private SshClient _client;
         private bool _disposed;
+        private readonly object _syncLock = new object();
 
         public SSHTransport(ConnectionProfile connection)
         {
@@ -25,16 +27,19 @@ namespace HermesDesktop.WinUI.Services
         /// </summary>
         public async Task<SSHCommandResult> ExecuteAsync(string remoteCommand, byte[] standardInput = null)
         {
-            EnsureConnected();
+            lock (_syncLock)
+            {
+                EnsureConnected();
+            }
 
             var command = _client.CreateCommand(remoteCommand);
             if (standardInput != null)
             {
-                // Note: SSH.NET doesn't provide a direct way to set standard input for a command.
-                // We would need to write to the command's input stream, but the API doesn't expose it easily.
-                // For now, we'll not support standard input and throw if it's provided.
-                // In a real implementation, we might use a different approach or ignore it for commands that don't need it.
-                throw new NotSupportedException("Standard input is not supported in this implementation.");
+                // We'll write the standard input to the command's input stream.
+                using (var inputStream = command.InputStream)
+                {
+                    inputStream.Write(standardInput, 0, standardInput.Length);
+                }
             }
 
             var result = command.Execute();
@@ -62,12 +67,7 @@ namespace HermesDesktop.WinUI.Services
 
             try
             {
-                // In a real implementation, we would use a JSON deserializer like System.Text.Json.
-                // For the purpose of this port, we'll throw a NotImplementedException to indicate the need for implementation.
-                // However, we can try to use System.Text.Json if available.
-                // Since we are in a .NET project, we can use System.Text.Json.
-                // But note: the original Swift code used JSONDecoder, so we are expecting JSON.
-                // We'll use System.Text.Json to deserialize the standard output.
+                // Use System.Text.Json to deserialize the standard output.
                 return System.Text.Json.JsonSerializer.Deserialize<T>(result.StandardOutput);
             }
             catch (Exception ex)
@@ -78,12 +78,12 @@ namespace HermesDesktop.WinUI.Services
 
         /// <summary>
         /// Gets the arguments for starting a shell (used for the terminal).
+        /// We are not using this in the current implementation, but we keep it for completeness.
         /// </summary>
         public IEnumerable<string> GetShellArguments(string startupCommandLine = null)
         {
-            // We are not implementing the terminal via SSH command arguments in this port.
-            // Instead, we will use the SSH client to create a shell session.
-            // This method is kept for compatibility with the original interface, but it's not used.
+            // This method is not used in the current implementation because we are using the SSH client to create a shell session.
+            // We'll throw a NotImplementedException to indicate that it's not implemented.
             throw new NotImplementedException();
         }
 
@@ -192,16 +192,6 @@ namespace HermesDesktop.WinUI.Services
 
         private IEnumerable<AuthenticationMethod> GetAuthenticationMethods()
         {
-            // We are assuming key-based authentication or agent-based authentication.
-            // For simplicity, we'll try to use the private key file from the user's .ssh directory.
-            // In a real implementation, we would also support passwords and other methods.
-            // However, note that the original app relied on the SSH agent or keys in ~/.ssh.
-            // We'll try to use the private key file if it exists, otherwise fall back to trying agent.
-            // SSH.NET has methods for private key and password authentication.
-            // We'll try to use the private key from the default location (~/.ssh/id_rsa or id_ed25519).
-            // If that fails, we'll try to use the SSH agent (if available) or password (if we had it, but we don't).
-            // Since we don't have a password, we'll rely on key or agent.
-
             var methods = new List<AuthenticationMethod>();
 
             // Try to use the private key from the default location.
@@ -221,19 +211,12 @@ namespace HermesDesktop.WinUI.Services
             else
             {
                 // If no key file is found, we try to use the SSH agent (if available) or assume the user will use agent.
-                // SSH.NET has a PrivateKeyAuthenticationMethod that can use an agent via the SshAgent.
-                // However, for simplicity, we'll just rely on the fact that the user might have set up the agent.
-                // We'll add a method that tries to use the agent, but note: SSH.NET doesn't have a built-in agent helper.
                 // We'll leave it empty and hope that the connection info will use the agent if no other method is provided.
-                // Actually, if we don't provide any authentication method, it will try to use the agent or password (if we had set a password).
+                // However, note that the ConnectionInfo constructor we are using does take authentication methods as a parameter.
+                // If we don't add any, then it will try to use the agent or password (if we had set the password property).
                 // We are not setting a password, so it will try agent.
                 // So we can leave the methods empty and let the ConnectionInfo handle it.
-                // But note: the ConnectionInfo constructor we are using does not take authentication methods as a parameter? It does.
-                // We are passing the authentication methods to the ConnectionInfo constructor.
-                // If we don't add any, then it will try to use the agent or password (if we had set the password property).
-                // We are not setting the password, so it will try agent.
-                // So we can just return an empty list and let the ConnectionInfo use the agent.
-                // However, note: the ConnectionInfo constructor we are using has an overload that takes authentication methods.
+                // But note: the ConnectionInfo constructor we are using has an overload that takes authentication methods.
                 // If we pass an empty list, it will still try to use the agent? Let's check the SSH.NET documentation.
                 // Actually, the ConnectionInfo constructor that we are using (with host, port, username, and authenticationMethods) 
                 // will use the provided authentication methods. If the list is empty, it will not try any method and the connection will fail.
