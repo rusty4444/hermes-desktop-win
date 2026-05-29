@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
@@ -23,17 +23,7 @@ jobs:
         run: dotnet restore src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj
 
       - name: Build
-        run: |
-          dotnet build src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release --no-restore -v detailed 2>&1 | Tee-Object -FilePath build.log
-          exit $LASTEXITCODE
-        shell: pwsh
-
-      - name: Show XAML errors
-        if: failure()
-        run: |
-          Write-Host "=== XAML errors from build log ==="
-          Select-String -Path build.log -Pattern "XAML|error CS|error XM|error MC|error XC|MarkupCompiler" -SimpleMatch | ForEach-Object { $_.Line }
-        shell: pwsh
+        run: dotnet build src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release --no-restore
 
       - name: Publish (self-contained)
         if: success()
