@@ -1,0 +1,41 @@
+name: Build Windows
+
+on:
+  push:
+    tags: ['v*']
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj
+
+      - name: Build
+        run: dotnet build src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release --no-restore
+
+      - name: Publish (self-contained)
+        run: dotnet publish src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HermesDesktop.WinUI
+          path: publish/
+
+      - name: Upload to Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: publish/HermesDesktop.WinUI.exe
