@@ -10,9 +10,9 @@ namespace HermesDesktop.WinUI.Converters
         {
             if (value is string stringValue)
             {
-                return !string.IsNullOrEmpty(stringValue) ? Windows.UI.Xaml.Visibility.Visible : Windows.UI.Xaml.Visibility.Collapsed;
+                return !string.IsNullOrEmpty(stringValue) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
             }
-            return Windows.UI.Xaml.Visibility.Collapsed;
+            return Microsoft.UI.Xaml.Visibility.Collapsed;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, string language)

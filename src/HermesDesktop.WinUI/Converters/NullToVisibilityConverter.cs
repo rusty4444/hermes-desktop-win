@@ -11,9 +11,9 @@ namespace HermesDesktop.WinUI.Converters
             // We can invert the logic if needed by using a parameter, but for now we do this.
             if (value == null)
             {
-                return Windows.UI.Xaml.Visibility.Collapsed;
+                return Microsoft.UI.Xaml.Visibility.Collapsed;
             }
-            return Windows.UI.Xaml.Visibility.Visible;
+            return Microsoft.UI.Xaml.Visibility.Visible;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, string language)
