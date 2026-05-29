@@ -1,0 +1,88 @@
+<Page
+    x:Class="HermesDesktop.WinUI.Views.UsageView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:HermesDesktop.WinUI.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="using:HermesDesktop.WinUI.ViewModels"
+    xmlns:models="using:HermesDesktop.WinUI.Models"
+    mc:Ignorable="d">
+
+    <Page.DataContext>
+        <viewmodels:UsageViewModel x:Name="ViewModel"/>
+    </Page.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Orientation="Horizontal" Margin="20">
+            <TextBlock Text="Usage" Style="{ThemeResource TitleTextBlockStyle}" Margin="0,0,0,10"/>
+        </StackPanel>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" Margin="20">
+            <StackPanel>
+                <!-- Stats Card -->
+                <Border BorderBrush="{ThemeResource SystemControlForegroundBaseMediumBrush}" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Usage Statistics" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Total Sessions:" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,4,0,0"/>
+                        <TextBlock Text="{x:Bind ViewModel.Stats.TotalSessions}" Style="{ThemeResource BodyTextBlockStyle}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Total Messages:" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,4,0,0"/>
+                        <TextBlock Text="{x:Bind ViewModel.Stats.TotalMessages}" Style="{ThemeResource BodyTextBlockStyle}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Total Tokens:" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,4,0,0"/>
+                        <TextBlock Text="{x:Bind ViewModel.Stats.TotalTokens}" Style="{ThemeResource BodyTextBlockStyle}" Margin="0,0,0,8"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Top Models -->
+                <Border BorderBrush="{ThemeResource SystemControlForegroundBaseMediumBrush}" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Top Models" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,0,0,8"/>
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.Stats.TopModels, Mode=OneWay}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Margin="0,2,0,2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Recent Sessions -->
+                <Border BorderBrush="{ThemeResource SystemControlForegroundBaseMediumBrush}" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Recent Sessions" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,0,0,8"/>
+                        <ListView ItemsSource="{x:Bind ViewModel.Stats.RecentSessions, Mode=OneWay}" Margin="0,0,0,8">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="models:RecentSession">
+                                    <StackPanel Margin="0,4,0,4">
+                                        <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyTextBlockStyle}" FontWeight="SemiBold"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                            <TextBlock Text="{x:Bind Timestamp, Converter={StaticResource TimestampToStringConverter}}" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,0,8,0"/>
+                                            <TextBlock Text="{x:Bind MessageCount}" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,0,4,0"/>
+                                            <TextBlock Text="msgs" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,0,4,0"/>
+                                            <TextBlock Text="{x:Bind TokenCount}" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,0,4,0"/>
+                                            <TextBlock Text="tokens" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </StackPanel>
+                </Border>
+
+                <!-- Refresh Button -->
+                <Button Content="Refresh" 
+                        Click="RefreshButton_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,16,0,0"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>
