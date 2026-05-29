@@ -19,19 +19,23 @@ jobs:
       - name: Restore
         run: dotnet restore src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj
 
-      - name: Build
-        id: build
+      - name: Build XAML only (generate input.json)
+        run: dotnet build src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release --no-restore -t:MarkupCompilePass1 -v detailed 2>&1 | Select-Object -Last 500
+        continue-on-error: true
+        shell: pwsh
+
+      - name: Read XAML compiler output
         run: |
-          $result = dotnet build src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release --no-restore -v detailed 2>&1
-          $result | Out-File -FilePath build-detailed.log -Encoding utf8
-          # Extract XAML-specific errors
-          Write-Host "=== XAML Errors ==="
-          $result | Select-String -Pattern "XamlCompiler|error XM|error MC|error XC|error VAL|MarkupComp" -SimpleMatch | ForEach-Object { $_.Line }
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "Build failed with exit code $LASTEXITCODE"
-            exit 1
+          Write-Host "=== Searching for output.json ==="
+          $files = Get-ChildItem -Path src/HermesDesktop.WinUI/obj -Recurse -Filter "*.json" -ErrorAction SilentlyContinue
+          foreach ($f in $files) {
+            Write-Host "`n=== $($f.FullName) ==="
+            try { Get-Content $f.FullName -Raw -ErrorAction Stop | Select-Object -First 500 } catch { Write-Host "(binary or unreadable)" }
           }
         shell: pwsh
+
+      - name: Full Build
+        run: dotnet build src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release --no-restore
 
       - name: Publish
         if: success()
