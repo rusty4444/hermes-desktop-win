@@ -37,6 +37,7 @@ namespace HermesDesktop.WinUI.Models
     {
         public string Id { get; set; }
         public string Title { get; set; }
+        public List<KanbanCard> Cards { get; set; } = new List<KanbanCard>();
     }
 
     public class KanbanCard

@@ -65,11 +65,12 @@ namespace HermesDesktop.WinUI.ViewModels
             {
                 var board = await _appState.KanbanService.GetBoardAsync();
                 Lanes.Clear();
+                Cards.Clear();
                 foreach (var lane in board.Lanes)
                 {
+                    lane.Cards = board.Cards.Where(c => c.LaneId == lane.Id).ToList();
                     Lanes.Add(lane);
                 }
-                Cards.Clear();
                 foreach (var card in board.Cards)
                 {
                     Cards.Add(card);

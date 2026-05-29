@@ -42,7 +42,7 @@
                                     <Border BorderBrush="{ThemeResource SystemControlForegroundBaseMediumBrush}" BorderThickness="1" CornerRadius="4" Width="250" Padding="8">
                                         <StackPanel>
                                             <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyTextBlockStyle}" FontWeight="SemiBold" TextAlignment="Center" Margin="0,0,0,4"/>
-                                            <ItemsControl ItemsSource="{x:Bind Path=ViewModel.Cards, Converter={StaticResource FilterCardsByLaneConverter}, ConverterParameter={x:Bind Id}}">
+                                            <ItemsControl ItemsSource="{Binding Cards}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
                                                         <StackPanel/>
