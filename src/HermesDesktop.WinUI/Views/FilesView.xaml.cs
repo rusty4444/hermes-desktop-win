@@ -79,7 +79,7 @@ namespace HermesDesktop.WinUI.Views
             var result = await dialog.ShowAsync();
             if (result == ContentDialogResult.Primary)
             {
-                var textBox = dialog.Content.FindName("FileNameTextBox") as TextBox;
+                var textBox = dialog.Content as TextBox;
                 if (textBox != null && !string.IsNullOrWhiteSpace(textBox.Text))
                 {
                     await ViewModel.CreateNewFileAsync(textBox.Text.Trim());
@@ -120,7 +120,7 @@ namespace HermesDesktop.WinUI.Views
         private async void CreateNewFile_Click(object sender, RoutedEventArgs e)
         {
             // Same as NewFile_Click
-            await NewFile_Click(sender, e);
+            NewFile_Click(sender, e);
         }
     }
 }
