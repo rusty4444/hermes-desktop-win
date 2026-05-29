@@ -23,13 +23,16 @@ jobs:
         run: dotnet restore src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj
 
       - name: Build
-        run: dotnet build src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release --no-restore -v normal
+        run: |
+          dotnet build src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release --no-restore -v detailed 2>&1 | Tee-Object -FilePath build.log
+          exit $LASTEXITCODE
+        shell: pwsh
 
-      - name: Dump XAML compiler errors (if build failed)
+      - name: Show XAML errors
         if: failure()
         run: |
-          Get-ChildItem -Path src/HermesDesktop.WinUI/obj -Recurse -Filter "*.xr.xml" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "=== $($_.FullName) ==="; Get-Content $_.FullName }
-          Get-ChildItem -Path src/HermesDesktop.WinUI/obj -Recurse -Filter "output.json" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "=== $($_.FullName) ==="; Get-Content $_.FullName }
+          Write-Host "=== XAML errors from build log ==="
+          Select-String -Path build.log -Pattern "XAML|error CS|error XM|error MC|error XC|MarkupCompiler" -SimpleMatch | ForEach-Object { $_.Line }
         shell: pwsh
 
       - name: Publish (self-contained)
