@@ -223,14 +223,13 @@ namespace HermesDesktop.WinUI.Services
         {
             Disconnect();
 
+            var authMethods = GetAuthenticationMethods().ToArray();
             var connectionInfo = new ConnectionInfo(
                 _connection.EffectiveTarget,
-                _connection.ResolvedPort ?? 22,
                 _connection.TrimmedUser ?? string.Empty,
-                GetAuthenticationMethods())
+                authMethods)
             {
-                // Accept all host keys on first connect (TOFU model)
-                // In production, you'd want to persist and verify host keys
+                Port = _connection.ResolvedPort ?? 22
             };
 
             _client = new SshClient(connectionInfo);

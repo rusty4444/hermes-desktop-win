@@ -37,11 +37,14 @@ namespace HermesDesktop.WinUI.Services
 
                 Disconnect(); // Ensure clean state
 
+                var authMethods = GetAuthenticationMethods().ToArray();
                 var connectionInfo = new ConnectionInfo(
                     _connection.EffectiveTarget,
-                    _connection.ResolvedPort ?? 22,
                     _connection.TrimmedUser ?? string.Empty,
-                    GetAuthenticationMethods());
+                    authMethods)
+                {
+                    Port = _connection.ResolvedPort ?? 22
+                };
 
                 _client = new SshClient(connectionInfo);
                 _client.Connect();
