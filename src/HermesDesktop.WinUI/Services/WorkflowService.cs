@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
+using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
+using HermesDesktop.WinUI.Models;
 
 namespace HermesDesktop.WinUI.Services
 {
@@ -67,16 +69,5 @@ namespace HermesDesktop.WinUI.Services
                 await File.WriteAllTextAsync(_workflowsFilePath, json);
             }
         }
-    }
-
-    public class Workflow
-    {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string Title { get; set; } = string.Empty;
-        public string HermesProfile { get; set; } = string.Empty;
-        public string InitialPrompt { get; set; } = string.Empty;
-        public List<string> SkillIds { get; set; } = new List<string>();
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

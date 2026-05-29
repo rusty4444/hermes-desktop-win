@@ -89,7 +89,7 @@ namespace HermesDesktop.WinUI.ViewModels
             ErrorMessage = string.Empty;
             try
             {
-                await _appState.WorkflowService.SaveWorkflowAsync(SelectedWorkflow));
+                await _appState.WorkflowService.SaveWorkflowAsync(SelectedWorkflow);
                 await LoadWorkflowsAsync();
             }
             catch (Exception ex)
@@ -117,7 +117,7 @@ namespace HermesDesktop.WinUI.ViewModels
             ErrorMessage = string.Empty;
             try
             {
-                await _appState.WorkflowService.DeleteWorkflowAsync(SelectedWorkflow.Id));
+                await _appState.WorkflowService.DeleteWorkflowAsync(SelectedWorkflow.Id);
                 await LoadWorkflowsAsync();
                 SelectedWorkflow = null;
             }

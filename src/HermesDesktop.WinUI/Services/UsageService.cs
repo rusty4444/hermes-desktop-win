@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using HermesDesktop.WinUI.Models;
 
 namespace HermesDesktop.WinUI.Services
 {
@@ -58,23 +59,5 @@ if __name__ == '__main__':
             var result = await _sshTransport.ExecuteJSONAsync<UsageStats>(pythonScript);
             return result;
         }
-    }
-
-    public class UsageStats
-    {
-        public int TotalSessions { get; set; }
-        public int TotalMessages { get; set; }
-        public int TotalTokens { get; set; }
-        public List<string> TopModels { get; set; } = new List<string>();
-        public List<RecentSession> RecentSessions { get; set; } = new List<RecentSession>();
-    }
-
-    public class RecentSession
-    {
-        public string Id { get; set; }
-        public string Title { get; set; }
-        public long Timestamp { get; set; }
-        public int MessageCount { get; set; }
-        public int TokenCount { get; set; }
     }
 }

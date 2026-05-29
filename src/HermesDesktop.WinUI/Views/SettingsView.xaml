@@ -70,6 +70,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <TextBlock Text="Alias:" Grid.Row="0" Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center"/>
@@ -86,6 +87,9 @@
 
                             <TextBlock Text="Hermes Profile:" Grid.Row="4" Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center"/>
                             <TextBox Grid.Row="4" Grid.Column="1" Text="{x:Bind ViewModel.NewHermesProfile, Mode=TwoWay}" PlaceholderText="Leave empty for default" Margin="0,0,0,8"/>
+
+                            <TextBlock Text="Password:" Grid.Row="5" Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <PasswordBox x:Name="NewPasswordBox" PlaceholderText="SSH password (optional)" Margin="0,0,0,8"/>
                         </Grid>
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0" Spacing="8">
                             <Button Content="Add" Click="AddButton_Click"/>

@@ -24,11 +24,13 @@ namespace HermesDesktop.WinUI.Views
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
+            ViewModel.NewPassword = NewPasswordBox.Password;
             _ = ViewModel.AddConnectionProfileAsync();
         }
 
         private void UpdateButton_Click(object sender, RoutedEventArgs e)
         {
+            ViewModel.NewPassword = NewPasswordBox.Password;
             _ = ViewModel.UpdateConnectionProfileAsync();
         }
 
@@ -49,6 +51,8 @@ namespace HermesDesktop.WinUI.Views
             ViewModel.NewUser = string.Empty;
             ViewModel.NewPort = null;
             ViewModel.NewHermesProfile = string.Empty;
+            ViewModel.NewPassword = string.Empty;
+            NewPasswordBox.Password = string.Empty;
         }
     }
 }

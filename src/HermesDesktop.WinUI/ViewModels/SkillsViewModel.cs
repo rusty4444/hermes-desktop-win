@@ -145,7 +145,7 @@ namespace HermesDesktop.WinUI.ViewModels
             ErrorMessage = string.Empty;
             try
             {
-                await _appState.SkillService.SaveSkillAsync(SelectedSkill.Id, SkillContent));
+                await _appState.SkillService.SaveSkillAsync(SelectedSkill.Id, SkillContent);
                 // Optionally, we can reload the skill to confirm the save.
                 await LoadSkillContentAsync();
             }
@@ -175,7 +175,7 @@ namespace HermesDesktop.WinUI.ViewModels
             try
             {
                 // We'll create an empty skill file.
-                await _appState.SkillService.SaveSkillAsync(skillId, string.Empty));
+                await _appState.SkillService.SaveSkillAsync(skillId, string.Empty);
                 // After creating the skill, we reload the list to show the new skill.
                 await LoadSkillsAsync();
                 // We select the newly created skill.
@@ -211,7 +211,7 @@ namespace HermesDesktop.WinUI.ViewModels
             ErrorMessage = string.Empty;
             try
             {
-                await _appState.SkillService.DeleteSkillAsync(SelectedSkill.Id));
+                await _appState.SkillService.DeleteSkillAsync(SelectedSkill.Id);
                 // After deleting, we reload the list.
                 await LoadSkillsAsync();
                 SelectedSkill = null;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Renci.SshNet;
 using Renci.SshNet.Common;
+using HermesDesktop.WinUI.Models;
 
 namespace HermesDesktop.WinUI.Services
 {
@@ -158,24 +159,46 @@ namespace HermesDesktop.WinUI.Services
         private IEnumerable<AuthenticationMethod> GetAuthenticationMethods()
         {
             var methods = new List<AuthenticationMethod>();
+            var username = _connection.TrimmedUser ?? string.Empty;
 
-            // Try to use the private key from the default location.
+            // 1. Try explicit password if set
+            if (!string.IsNullOrEmpty(_connection.Password))
+            {
+                methods.Add(new PasswordAuthenticationMethod(username, _connection.Password));
+            }
+
+            // 2. Try private key files
             var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var sshDir = System.IO.Path.Combine(userProfile, ".ssh");
-            var rsaKey = System.IO.Path.Combine(sshDir, "id_rsa");
-            var ed25519Key = System.IO.Path.Combine(sshDir, "id_ed25519");
 
-            if (System.IO.File.Exists(rsaKey))
+            var keyPaths = new[]
             {
-                methods.Add(new PrivateKeyAuthenticationMethod(_connection.TrimmedUser ?? string.Empty, rsaKey));
+                System.IO.Path.Combine(sshDir, "id_ed25519"),
+                System.IO.Path.Combine(sshDir, "id_rsa"),
+                System.IO.Path.Combine(sshDir, "id_ecdsa"),
+            };
+
+            foreach (var keyPath in keyPaths)
+            {
+                if (System.IO.File.Exists(keyPath))
+                {
+                    try
+                    {
+                        var privateKeyFile = new PrivateKeyFile(keyPath);
+                        methods.Add(new PrivateKeyAuthenticationMethod(username, privateKeyFile));
+                    }
+                    catch
+                    {
+                        // Skip unreadable keys
+                    }
+                }
             }
-            else if (System.IO.File.Exists(ed25519Key))
+
+            if (methods.Count == 0)
             {
-                methods.Add(new PrivateKeyAuthenticationMethod(_connection.TrimmedUser ?? string.Empty, ed25519Key));
-            }
-            else
-            {
-                throw new InvalidOperationException("No private key found in ~/.ssh/id_rsa or ~/.ssh/id_ed25519. Please set up SSH key-based authentication.");
+                throw new InvalidOperationException(
+                    "No authentication methods available. " +
+                    "Ensure an SSH key exists or set a password in the connection profile.");
             }
 
             return methods;

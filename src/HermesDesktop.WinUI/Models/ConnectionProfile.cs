@@ -12,6 +12,9 @@ namespace HermesDesktop.WinUI.Models
         public int? Port { get; set; }
         public string SshAlias { get; set; } = string.Empty;
         public string HermesProfile { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string HermesHomePath { get; set; } = string.Empty;
+        public string CliHermesProfileName { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets the effective target (hostname or IP) for the SSH connection.

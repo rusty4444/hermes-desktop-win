@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
+using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
+using HermesDesktop.WinUI.Models;
 
 namespace HermesDesktop.WinUI.Services
 {
@@ -19,13 +21,12 @@ namespace HermesDesktop.WinUI.Services
         }
 
         /// <summary>
-        /// Gets a list of skills from the remote host.
+        /// Gets a list of skills (SKILL.md files) from the remote host.
         /// </summary>
-        public async Task<IEnumerable<SkillInfo>> GetSkillsAsync()
+        public async Task<List<SkillInfo>> GetSkillsAsync()
         {
             var pythonScript = @"
-import json
-import os
+import json, os, re
 
 def get_skills():
     skills_dir = os.path.expanduser('~/.hermes/skills')
@@ -33,203 +34,166 @@ def get_skills():
         return []
 
     skills = []
-    for filename in os.listdir(skills_dir):
-        if filename.endswith('.md') or filename.endswith('.SKILL.md'):
-            filepath = os.path.join(skills_dir, filename)
+    for root, dirs, files in os.walk(skills_dir):
+        for filename in files:
+            if not filename.endswith('.md'):
+                continue
+            filepath = os.path.join(root, filename)
             try:
                 with open(filepath, 'r') as f:
                     content = f.read()
-                # We try to extract the frontmatter (YAML) and the title.
-                # For simplicity, we'll just return the filename and the first line as title.
-                lines = content.Split('\n');
-                string title = filename;
-                if (lines.Length > 0 && lines[0].StartsWith('---'))
-                {
-                    // Simple YAML frontmatter parsing: look for 'title:' or 'name:'
-                    for (int i = 1; i < lines.Length; i++)
-                    {
-                        if (lines[i].Trim().StartsWith('title:'))
-                        {
-                            title = lines[i].Substring('title:'.Length).Trim();
-                            break;
-                        }
-                        if (lines[i].Trim().StartsWith('name:'))
-                        {
-                            title = lines[i].Substring('name:'.Length).Trim();
-                            break;
-                        }
-                    }
-                }
-                skills.Add(new {
-                    id = filename,
-                    title = title,
-                    path = filepath
-                });
-            }
-            catch Exception
-            {
-                // Skip invalid files
+
+                title = filename
+                description = ''
+
+                # Try to parse YAML frontmatter
+                if content.startswith('---'):
+                    end = content.find('---', 3)
+                    if end > 0:
+                        fm = content[3:end]
+                        for line in fm.split('\n'):
+                            line = line.strip()
+                            if line.startswith('title:'):
+                                title = line[6:].strip().strip('\"').strip(\"'\")
+                            elif line.startswith('name:'):
+                                title = line[5:].strip().strip('\"').strip(\"'\")
+                            elif line.startswith('description:'):
+                                description = line[12:].strip().strip('\"').strip(\"'\")
+
+                skills.append({
+                    'id': filename,
+                    'title': title,
+                    'path': filepath,
+                    'description': description
+                })
+            except Exception:
                 pass
-            }
-    return skills;
+
+    return skills
 
 if __name__ == '__main__':
     result = get_skills()
     print(json.dumps(result))
 ";
-            var result = await _sshTransport.ExecuteJSONAsync<List<SkillInfo>>(pythonScript);
-            return result;
+            return await _sshTransport.ExecuteJSONAsync<List<SkillInfo>>(pythonScript);
         }
 
         /// <summary>
-        /// Gets the content of a skill.
+        /// Gets the content of a skill by its filename.
         /// </summary>
         public async Task<string> GetSkillContentAsync(string skillId)
         {
-            var pythonScript = $@"
-import json
-import os
-import sys
+            var safeId = JsonSerializer.Serialize(skillId);
+            var pythonScript = @"
+import json, os, sys
 
-skill_id = {json.dumps(skillId)}
+skill_id = " + safeId + @"
 skills_dir = os.path.expanduser('~/.hermes/skills')
 filepath = os.path.join(skills_dir, skill_id)
 
 if not os.path.isfile(filepath):
-    // Try with .SKILL.md suffix
     filepath = os.path.join(skills_dir, skill_id + '.SKILL.md')
-    if (!os.path.isfile(filepath))
-    {
-        print(json.dumps({{'error': 'Skill not found'}}))
-        sys.exit(1)
-    }
+    if os.path.isfile(filepath):
+        pass  # found it
+    else:
+        # Search recursively
+        found = None
+        for root, dirs, files in os.walk(skills_dir):
+            for fname in files:
+                if fname == skill_id or fname == skill_id + '.SKILL.md' or fname == skill_id + '.md':
+                    found = os.path.join(root, fname)
+                    break
+            if found:
+                break
+        if found:
+            filepath = found
+        else:
+            print(json.dumps({'error': 'Skill not found: ' + skill_id}))
+            sys.exit(1)
 
 try:
     with open(filepath, 'r') as f:
         content = f.read()
-    print(json.dumps({{'content': content}}))
-catch Exception as e:
-    print(json.dumps({{'error': e.ToString()})))
+    print(json.dumps({'content': content}))
+except Exception as e:
+    print(json.dumps({'error': str(e)}))
 ";
             var result = await _sshTransport.ExecuteJSONAsync<SkillContentResult>(pythonScript);
-            if (result.Error != null)
-            {
+            if (!string.IsNullOrEmpty(result.Error))
                 throw new IOException(result.Error);
-            }
-            return result.Content;
+            return result.Content ?? string.Empty;
         }
 
         /// <summary>
-        /// Saves the content of a skill.
+        /// Saves content to a skill file on the remote host.
         /// </summary>
         public async Task SaveSkillAsync(string skillId, string content)
         {
-            var pythonScript = $@"
-import json
-import os
-import sys
+            var safeId = JsonSerializer.Serialize(skillId);
+            var safeContent = JsonSerializer.Serialize(content);
+            var pythonScript = @"
+import json, os
 
-skill_id = {json.dumps(skillId)}
-content = {json.dumps(content)}
+skill_id = " + safeId + @"
+content = " + safeContent + @"
 skills_dir = os.path.expanduser('~/.hermes/skills')
 
 def save_skill(skill_id, content, skills_dir):
     try:
-        // Ensure the directory exists
-        if (!os.path.exists(skills_dir))
-        {
-            os.makedirs(skills_dir)
-        }
-        filepath = os.path.join(skills_dir, skill_id)
-        // If the skill_id doesn't end with .md or .SKILL.md, we add .SKILL.md
-        if (!skill_id.EndsWith('.md') && !skill_id.EndsWith('.SKILL.md'))
-        {
-            filepath = filepath + '.SKILL.md'
-        }
+        os.makedirs(skills_dir, exist_ok=True)
+
+        if not skill_id.endswith('.md'):
+            filepath = os.path.join(skills_dir, skill_id + '.SKILL.md')
+        else:
+            filepath = os.path.join(skills_dir, skill_id)
+
         with open(filepath, 'w') as f:
             f.write(content)
-        return {{'success': true, 'error': null}}
-    catch Exception as e:
-        return {{'success': false, 'error': e.ToString()}}
+        return {'success': True, 'error': None}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 if __name__ == '__main__':
     result = save_skill(skill_id, content, skills_dir)
     print(json.dumps(result))
 ";
-            var result = await _sshTransport.ExecuteJSONAsync<SaveSkillResult>(pythonScript);
+            var result = await _sshTransport.ExecuteJSONAsync<SaveResult>(pythonScript);
             if (!result.Success)
-            {
-                throw new IOException(result.Error);
-            }
+                throw new IOException(result.Error ?? "Unknown error saving skill");
         }
 
         /// <summary>
-        /// Deletes a skill.
+        /// Deletes a skill by its filename.
         /// </summary>
         public async Task DeleteSkillAsync(string skillId)
         {
-            var pythonScript = $@"
-import json
-import os
-import sys
+            var safeId = JsonSerializer.Serialize(skillId);
+            var pythonScript = @"
+import json, os
 
-skill_id = {json.dumps(skillId)}
+skill_id = " + safeId + @"
 skills_dir = os.path.expanduser('~/.hermes/skills')
 
 def delete_skill(skill_id, skills_dir):
     try:
         filepath = os.path.join(skills_dir, skill_id)
-        if (!os.path.isfile(filepath))
-        {
-            // Try with .SKILL.md suffix
+        if not os.path.isfile(filepath):
             filepath = os.path.join(skills_dir, skill_id + '.SKILL.md')
-        }
-        if (os.path.isfile(filepath))
-        {
+        if os.path.isfile(filepath):
             os.remove(filepath)
-            return {{'success': true, 'error': null}}
-        }
-        else
-        {
-            return {{'success': false, 'error': 'Skill not found'}}
-        }
-    catch Exception as e:
-        return {{'success': false, 'error': e.ToString()}}
+            return {'success': True, 'error': None}
+        else:
+            return {'success': False, 'error': 'Skill not found: ' + skill_id}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 if __name__ == '__main__':
     result = delete_skill(skill_id, skills_dir)
     print(json.dumps(result))
 ";
-            var result = await _sshTransport.ExecuteJSONAsync<DeleteSkillResult>(pythonScript);
+            var result = await _sshTransport.ExecuteJSONAsync<SaveResult>(pythonScript);
             if (!result.Success)
-            {
-                throw new IOException(result.Error);
-            }
+                throw new IOException(result.Error ?? "Unknown error deleting skill");
         }
-    }
-
-    public class SkillInfo
-    {
-        public string Id { get; set; }
-        public string Title { get; set; }
-        public string Path { get; set; }
-    }
-
-    public class SkillContentResult
-    {
-        public string Content { get; set; }
-        public string Error { get; set; }
-    }
-
-    public class SaveSkillResult
-    {
-        public bool Success { get; set; }
-        public string Error { get; set; }
-    }
-
-    public class DeleteSkillResult
-    {
-        public bool Success { get; set; }
-        public string Error { get; set; }
     }
 }

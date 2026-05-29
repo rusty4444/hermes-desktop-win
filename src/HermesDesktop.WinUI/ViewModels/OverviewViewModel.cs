@@ -60,6 +60,7 @@ namespace HermesDesktop.WinUI.ViewModels
 
         /// <summary>
         /// Updates the view model based on the current connection in AppState.
+        /// Uses RemoteHermesService for comprehensive workspace discovery.
         /// </summary>
         public async Task UpdateConnectionInfoAsync()
         {
@@ -76,78 +77,38 @@ namespace HermesDesktop.WinUI.ViewModels
                     return;
                 }
 
-                // Test the connection by running a simple command.
-                var result = await _appState.SshTransport.ExecuteAsync("echo 'connected'");
-                if (result.ExitCode == 0)
+                // Use RemoteHermesService for discovery
+                var discovery = await _appState.RemoteHermesService.DiscoverAsync(connection);
+                if (discovery.Ok)
                 {
                     IsConnected = true;
                     HostInfo = $"Host: {connection.EffectiveTarget}";
-                    if (!string.IsNullOrWhiteSpace(connection.HermesProfile))
-                    {
-                        HermesProfileInfo = $"Hermes Profile: {connection.HermesProfile}";
-                    }
-                    else
-                    {
-                        HermesProfileInfo = "Hermes Profile: (default)";
-                    }
+                    HermesProfileInfo = connection.HermesProfile != null
+                        ? $"Hermes Profile: {connection.HermesProfile}"
+                        : "Hermes Profile: (default)";
                     ConnectionStatus = "Connected";
 
-                    // Discover available Hermes profiles on the host.
-                    await DiscoverProfilesAsync();
+                    if (!string.IsNullOrEmpty(discovery.HermesVersion))
+                        ConnectionStatus += $" | Hermes {discovery.HermesVersion}";
+
+                    DiscoveredProfiles.Clear();
+                    foreach (var profile in discovery.AvailableProfiles ?? new List<Services.ProfileInfo>())
+                    {
+                        DiscoveredProfiles.Add(profile.Name + (profile.IsDefault ? " (default)" : ""));
+                    }
                 }
                 else
                 {
                     IsConnected = false;
                     HostInfo = $"Host: {connection.EffectiveTarget}";
-                    HermesProfileInfo = string.Empty;
-                    ConnectionStatus = $"Connection failed: {result.StandardError}";
-                    DiscoveredProfiles.Clear();
+                    ConnectionStatus = $"Discovery failed: {discovery.Error}";
                 }
             }
             catch (Exception ex)
             {
                 IsConnected = false;
                 HostInfo = "Error";
-                HermesProfileInfo = string.Empty;
                 ConnectionStatus = $"Error: {ex.Message}";
-                DiscoveredProfiles.Clear();
-            }
-        }
-
-        private async Task DiscoverProfilesAsync()
-        {
-            try
-            {
-                // We'll run a command to list the profiles in the ~/.hermes directory.
-                // The command: ls -1 ~/.hermes/profiles/ 2>/dev/null || echo "default"
-                // We'll use the SSH transport to run the command and parse the output.
-                var result = await _appState.SshTransport.ExecuteAsync(
-                    "ls -1 ~/.hermes/profiles/ 2>/dev/null || echo 'default'");
-                if (result.ExitCode == 0)
-                {
-                    var profiles = result.StandardOutput.Split(
-                        new[] { '\r', '\n' },
-                        StringSplitOptions.RemoveEmptyEntries);
-                    DiscoveredProfiles.Clear();
-                    foreach (var profile in profiles)
-                    {
-                        if (!string.IsNullOrWhiteSpace(profile))
-                        {
-                            DiscoveredProfiles.Add(profile.Trim());
-                        }
-                    }
-                }
-                else
-                {
-                    // If we can't list the profiles, we'll just show the default.
-                    DiscoveredProfiles.Clear();
-                    DiscoveredProfiles.Add("default");
-                }
-            }
-            catch
-            {
-                DiscoveredProfiles.Clear();
-                DiscoveredProfiles.Add("default");
             }
         }
 

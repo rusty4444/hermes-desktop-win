@@ -1,0 +1,101 @@
+<Page
+    x:Class="HermesDesktop.WinUI.Views.ChatView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="using:HermesDesktop.WinUI.ViewModels"
+    mc:Ignorable="d">
+
+    <Page.DataContext>
+        <viewmodels:ChatViewModel x:Name="ViewModel"/>
+    </Page.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{ThemeResource SystemControlAcrylicElementBrush}" Padding="12,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Grid.Column="0">
+                    <TextBlock Text="Chat" Style="{ThemeResource SubtitleTextBlockStyle}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <TextBlock x:Name="SessionLabel" Text="(new session)" Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource SystemControlDisabledBaseMediumBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="1" Spacing="8">
+                    <CheckBox Content="Auto-approve" IsChecked="{x:Bind ViewModel.AutoApprove, Mode=TwoWay}"
+                              VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Button Content="New Session" Click="NewSession_Click" Margin="0,0,4,0"/>
+                    <Button Content="Resume..." Click="ResumeSession_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Chat Messages -->
+        <ScrollViewer Grid.Row="1" x:Name="MessageScroller" VerticalScrollBarVisibility="Auto" Margin="0,0,0,0">
+            <ItemsControl ItemsSource="{x:Bind ViewModel.Messages, Mode=OneWay}" Margin="12,12,12,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="viewmodels:ChatMessage">
+                        <Border Margin="0,0,0,12" Padding="10" CornerRadius="6"
+                                Background="{x:Bind Role, Converter={StaticResource ChatRoleToBrushConverter}}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock Text="{x:Bind Role}" Style="{ThemeResource CaptionTextBlockStyle}"
+                                               FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{x:Bind TimeDisplay}" Style="{ThemeResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource SystemControlDisabledBaseMediumBrush}"/>
+                                </StackPanel>
+                                <TextBlock Text="{x:Bind Content}" TextWrapping="Wrap" FontFamily="Consolas"
+                                           FontSize="13" IsTextSelectionEnabled="True"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Input Area -->
+        <Border Grid.Row="2" BorderBrush="{ThemeResource SystemControlForegroundBaseMediumBrush}"
+                BorderThickness="0,1,0,0" Padding="12,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="InputBox"
+                         Text="{x:Bind ViewModel.InputText, Mode=TwoWay}"
+                         PlaceholderText="Type a message for Hermes..."
+                         AcceptsReturn="False"
+                         IsEnabled="{x:Bind ViewModel.IsSending, Converter={StaticResource InvertBoolConverter}}"
+                         KeyDown="InputBox_KeyDown"
+                         Grid.Column="0" Margin="0,0,8,0"/>
+                <Button x:Name="SendButton"
+                        Content="Send"
+                        Click="SendButton_Click"
+                        IsEnabled="{x:Bind ViewModel.IsSending, Converter={StaticResource InvertBoolConverter}}"
+                        Grid.Column="1"
+                        Style="{StaticResource AccentButtonStyle}"/>
+            </Grid>
+        </Border>
+
+        <!-- Loading Overlay -->
+        <ProgressBar Grid.Row="1" IsIndeterminate="True"
+                     Visibility="{x:Bind ViewModel.IsSending, Converter={StaticResource BoolToVisibilityConverter}}"
+                     VerticalAlignment="Top" Margin="20,0,20,0"/>
+
+        <!-- Error Banner -->
+        <Border Grid.Row="1" Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}"
+                Visibility="{x:Bind ViewModel.ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"
+                Padding="8" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,8" CornerRadius="4">
+            <TextBlock Text="{x:Bind ViewModel.ErrorMessage}" TextWrapping="Wrap" Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}"/>
+        </Border>
+    </Grid>
+</Page>

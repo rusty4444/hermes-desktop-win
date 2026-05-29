@@ -12,7 +12,17 @@ namespace HermesDesktop.WinUI
         private static readonly Lazy<AppState> lazy = new Lazy<AppState>(() => new AppState());
         public static AppState Instance => lazy.Value;
 
-        public ConnectionProfile ActiveConnection { get; set; } = new ConnectionProfile();
+        private ConnectionProfile _activeConnection = new ConnectionProfile();
+        public ConnectionProfile ActiveConnection
+        {
+            get => _activeConnection;
+            set
+            {
+                _activeConnection = value;
+                InitializeServices();
+            }
+        }
+
         public SSHTransport SshTransport { get; private set; }
         public SessionBrowserService SessionBrowserService { get; private set; }
         public WorkflowService WorkflowService { get; private set; }
@@ -21,32 +31,30 @@ namespace HermesDesktop.WinUI
         public UsageService UsageService { get; private set; }
         public SkillService SkillService { get; private set; }
         public TerminalService TerminalService { get; private set; }
+        public CronBrowserService CronBrowserService { get; private set; }
+        public RemoteHermesService RemoteHermesService { get; private set; }
+        public HermesChatService HermesChatService { get; private set; }
 
         private AppState()
         {
-            // Initialize the SSH transport with the active connection (which may be empty initially)
-            SshTransport = new SSHTransport(new AppPaths());
+            InitializeServices();
+        }
+
+        private void InitializeServices()
+        {
+            // Initialize the SSH transport with the active connection
+            SshTransport = new SSHTransport(ActiveConnection);
+            // Initialize services that depend on SSH transport
             SessionBrowserService = new SessionBrowserService(SshTransport);
-            WorkflowService = new WorkflowService();
+            WorkflowService = new WorkflowService(); // This one does not depend on SSH
             KanbanService = new KanbanService(SshTransport);
             FileEditorService = new FileEditorService(SshTransport);
             UsageService = new UsageService(SshTransport);
             SkillService = new SkillService(SshTransport);
+            CronBrowserService = new CronBrowserService(SshTransport);
+            RemoteHermesService = new RemoteHermesService(SshTransport);
+            HermesChatService = new HermesChatService(SshTransport);
             // TerminalService will be created on demand when needed
-        }
-
-        // We'll add more services as needed, but for now, we just have the SSH transport.
-    }
-
-    // A placeholder for AppPaths, similar to the Swift version.
-    public class AppPaths
-    {
-        public string ControlPathFor(ConnectionProfile connection)
-        {
-            // In the Swift version, this returns a path for the SSH control socket.
-            // We are not implementing multiplexing in the SSH.NET version for simplicity.
-            // Return an empty string or a dummy path.
-            return string.Empty;
         }
     }
 }

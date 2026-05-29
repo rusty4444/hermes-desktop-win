@@ -19,6 +19,10 @@
                                     Content="Overview"
                                     Icon="Home"
                                     Tag="overview"/>
+                <NavigationViewItem x:Name="ChatItem"
+                                    Content="Chat"
+                                    Icon="Message"
+                                    Tag="chat"/>
                 <NavigationViewItem x:Name="SessionsItem"
                                     Content="Sessions"
                                     Icon="Chat"
@@ -27,6 +31,10 @@
                                     Content="Workflows"
                                     Icon="Repeat"
                                     Tag="workflows"/>
+                <NavigationViewItem x:Name="CronJobsItem"
+                                    Content="Cron Jobs"
+                                    Icon="Calendar"
+                                    Tag="cronjobs"/>
                 <NavigationViewItem x:Name="KanbanItem"
                                     Content="Kanban"
                                     Icon="Preview"

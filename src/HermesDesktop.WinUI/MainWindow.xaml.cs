@@ -35,11 +35,17 @@ namespace HermesDesktop.WinUI
                     case "overview":
                         ContentFrame.Navigate(typeof(OverviewView));
                         break;
+                    case "chat":
+                        ContentFrame.Navigate(typeof(ChatView));
+                        break;
                     case "sessions":
                         ContentFrame.Navigate(typeof(SessionsView));
                         break;
                     case "workflows":
                         ContentFrame.Navigate(typeof(WorkflowsView));
+                        break;
+                    case "cronjobs":
+                        ContentFrame.Navigate(typeof(CronJobsView));
                         break;
                     case "kanban":
                         ContentFrame.Navigate(typeof(KanbanView));

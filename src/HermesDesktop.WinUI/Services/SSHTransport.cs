@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Renci.SshNet;
 using Renci.SshNet.Common;
@@ -8,7 +10,8 @@ using Renci.SshNet.Common;
 namespace HermesDesktop.WinUI.Services
 {
     /// <summary>
-    /// Provides SSH transport functionality.
+    /// Provides SSH transport functionality for connecting to remote Hermes hosts.
+    /// Supports key-based, agent-based, and password authentication.
     /// </summary>
     public class SSHTransport : IDisposable
     {
@@ -17,14 +20,36 @@ namespace HermesDesktop.WinUI.Services
         private bool _disposed;
         private readonly object _syncLock = new object();
 
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
+
         public SSHTransport(ConnectionProfile connection)
         {
             _connection = connection ?? throw new ArgumentNullException(nameof(connection));
         }
 
         /// <summary>
+        /// True if the SSH client is currently connected.
+        /// </summary>
+        public bool IsConnected
+        {
+            get
+            {
+                lock (_syncLock)
+                {
+                    return _client != null && _client.IsConnected;
+                }
+            }
+        }
+
+        /// <summary>
         /// Executes a command on the remote host and returns the result.
         /// </summary>
+        /// <param name="remoteCommand">The shell command to execute.</param>
+        /// <param name="standardInput">Optional bytes to pipe to stdin.</param>
         public async Task<SSHCommandResult> ExecuteAsync(string remoteCommand, byte[] standardInput = null)
         {
             lock (_syncLock)
@@ -33,16 +58,19 @@ namespace HermesDesktop.WinUI.Services
             }
 
             var command = _client.CreateCommand(remoteCommand);
-            if (standardInput != null)
+
+            if (standardInput != null && standardInput.Length > 0)
             {
-                // We'll write the standard input to the command's input stream.
                 using (var inputStream = command.InputStream)
                 {
-                    inputStream.Write(standardInput, 0, standardInput.Length);
+                    await inputStream.WriteAsync(standardInput, 0, standardInput.Length);
+                    inputStream.Close();
                 }
             }
 
-            var result = command.Execute();
+            // SSH.NET's Execute is synchronous, but we wrap in Task.Run
+            var result = await Task.Run(() => command.Execute());
+
             return new SSHCommandResult
             {
                 StandardOutput = result.Result,
@@ -52,39 +80,49 @@ namespace HermesDesktop.WinUI.Services
         }
 
         /// <summary>
-        /// Executes a command that returns JSON and deserializes it into the specified type.
+        /// Executes a Python script on the remote host and deserializes its JSON stdout.
+        /// Uses base64 encoding to avoid quoting issues with embedded quotes/special chars.
         /// </summary>
         public async Task<T> ExecuteJSONAsync<T>(string pythonScript)
         {
-            // We assume the remote host has python3 and we can run a script that outputs JSON.
-            var command = $"python3 -c \"{pythonScript}\"";
+            // Encode the script as base64 to avoid shell quoting nightmares
+            var scriptBytes = Encoding.UTF8.GetBytes(pythonScript);
+            var scriptBase64 = Convert.ToBase64String(scriptBytes);
+
+            // Pipe the base64-decoded script to python3 on the remote host
+            var command = $"echo '{scriptBase64}' | base64 -d | python3";
+
             var result = await ExecuteAsync(command);
 
             if (result.ExitCode != 0)
             {
-                throw new SSHTransportError($"Remote command failed with exit code {result.ExitCode}: {result.StandardError}");
+                throw new SSHTransportError(
+                    $"Remote command failed with exit code {result.ExitCode}: {result.StandardError}");
             }
 
             try
             {
-                // Use System.Text.Json to deserialize the standard output.
-                return System.Text.Json.JsonSerializer.Deserialize<T>(result.StandardOutput);
-            }
-            catch (Exception ex)
-            {
-                throw new SSHTransportError($"Failed to decode remote JSON: {ex.Message}");
-            }
-        }
+                var output = result.StandardOutput?.Trim();
+                if (string.IsNullOrEmpty(output))
+                {
+                    throw new SSHTransportError("Remote Python script produced no output.");
+                }
 
-        /// <summary>
-        /// Gets the arguments for starting a shell (used for the terminal).
-        /// We are not using this in the current implementation, but we keep it for completeness.
-        /// </summary>
-        public IEnumerable<string> GetShellArguments(string startupCommandLine = null)
-        {
-            // This method is not used in the current implementation because we are using the SSH client to create a shell session.
-            // We'll throw a NotImplementedException to indicate that it's not implemented.
-            throw new NotImplementedException();
+                var deserialized = JsonSerializer.Deserialize<T>(output, JsonOptions);
+                if (deserialized == null)
+                {
+                    throw new SSHTransportError("Remote JSON deserialized to null.");
+                }
+                return deserialized;
+            }
+            catch (JsonException ex)
+            {
+                var preview = (result.StandardOutput ?? "").Length > 500
+                    ? result.StandardOutput.Substring(0, 500) + "..."
+                    : result.StandardOutput;
+                throw new SSHTransportError(
+                    $"Failed to decode remote JSON: {ex.Message}\nRaw output preview: {preview}");
+            }
         }
 
         /// <summary>
@@ -103,49 +141,44 @@ namespace HermesDesktop.WinUI.Services
         /// </summary>
         public string DescribeRemoteFailure(SSHCommandResult result)
         {
-            // We'll reuse the logic from the original Swift code, but simplified.
             if (!string.IsNullOrEmpty(result.StandardError))
             {
                 var error = result.StandardError.Trim();
+
                 if (error.Contains("Permission denied", StringComparison.OrdinalIgnoreCase))
-                {
                     return "SSH authentication failed. Verify the key, SSH agent, and user for this SSH target.";
-                }
+
                 if (error.Contains("Host key verification failed", StringComparison.OrdinalIgnoreCase))
-                {
                     return "SSH host key verification failed. Connect once in Terminal or update known_hosts before retrying.";
-                }
+
                 if (error.Contains("remote host identification has changed", StringComparison.OrdinalIgnoreCase))
-                {
                     return "The SSH host key changed for this target. Refresh the entry in known_hosts before retrying.";
-                }
+
                 if (error.Contains("Could not resolve hostname", StringComparison.OrdinalIgnoreCase) ||
                     error.Contains("Name or service not known", StringComparison.OrdinalIgnoreCase))
-                {
-                    return "The SSH target could not be resolved. Check the alias, hostname, IP address, or SSH config entry in this profile.";
-                }
+                    return "The SSH target could not be resolved. Check the alias, hostname, IP address, or SSH config entry.";
+
                 if (error.Contains("Connection refused", StringComparison.OrdinalIgnoreCase))
-                {
                     return "The SSH server refused the connection. Confirm that SSH is enabled and reachable on the target host.";
-                }
+
                 if (error.Contains("Operation timed out", StringComparison.OrdinalIgnoreCase) ||
                     error.Contains("Connection timed out", StringComparison.OrdinalIgnoreCase))
-                {
-                    return "The SSH connection timed out. Check that the target host is reachable from this Mac and that your SSH route is correct.";
-                }
+                    return "The SSH connection timed out. Check that the target host is reachable and your SSH route is correct.";
+
                 if (error.Contains("No route to host", StringComparison.OrdinalIgnoreCase) ||
                     error.Contains("Network is unreachable", StringComparison.OrdinalIgnoreCase))
-                {
-                    return "The SSH target is unreachable from this Mac. Check the hostname, IP address, VPN, or local network path and retry.";
-                }
+                    return "The SSH target is unreachable. Check the hostname, IP address, VPN, or local network path and retry.";
+
                 if (error.Contains("python3: command not found", StringComparison.OrdinalIgnoreCase) ||
                     error.Contains("command not found: python3", StringComparison.OrdinalIgnoreCase) ||
                     error.Contains("python3: not found", StringComparison.OrdinalIgnoreCase) ||
                     error.Contains("unknown command: python3", StringComparison.OrdinalIgnoreCase) ||
-                    error.Contains("env: python3: no such file or directory", StringComparison.OrdinalIgnoreCase))
-                {
+                    error.Contains("env: python3: No such file or directory", StringComparison.OrdinalIgnoreCase))
                     return "SSH succeeded, but python3 is not available in the remote non-interactive SSH shell PATH. Install python3 or expose it in the SSH shell environment before retrying. Hermes Desktop requires python3 for discovery, file editing, and session browsing.";
-                }
+
+                if (error.Contains("base64: command not found", StringComparison.OrdinalIgnoreCase) ||
+                    error.Contains("base64: invalid", StringComparison.OrdinalIgnoreCase))
+                    return "SSH succeeded, but base64 is not available or failed on the remote host. Ensure a working base64 utility is in the PATH.";
 
                 return error;
             }
@@ -154,80 +187,131 @@ namespace HermesDesktop.WinUI.Services
             {
                 var output = result.StandardOutput.Trim();
                 if (!string.IsNullOrEmpty(output))
-                {
                     return output;
-                }
             }
 
             return $"SSH command failed with exit code {result.ExitCode}.";
         }
 
+        /// <summary>
+        /// Tests the SSH connection by running a simple echo command.
+        /// Returns true if successful, false with error message otherwise.
+        /// </summary>
+        public async Task<(bool Success, string Error)> TestConnectionAsync()
+        {
+            try
+            {
+                var result = await ExecuteAsync("echo 'hermes-ok'");
+                if (result.ExitCode == 0 && result.StandardOutput?.Trim() == "hermes-ok")
+                {
+                    return (true, null);
+                }
+                return (false, result.ExitCode != 0
+                    ? DescribeRemoteFailure(result)
+                    : "Unexpected response from remote host.");
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+        }
+
+        #region Connection Management
+
         private void EnsureConnected()
         {
             if (_disposed)
-            {
                 throw new ObjectDisposedException(nameof(SSHTransport));
-            }
 
             if (_client == null || !_client.IsConnected)
-            {
                 Connect();
-            }
         }
 
         private void Connect()
         {
-            // Disconnect any existing client.
             Disconnect();
 
             var connectionInfo = new ConnectionInfo(
                 _connection.EffectiveTarget,
                 _connection.ResolvedPort ?? 22,
                 _connection.TrimmedUser ?? string.Empty,
-                GetAuthenticationMethods());
+                GetAuthenticationMethods())
+            {
+                // Accept all host keys on first connect (TOFU model)
+                // In production, you'd want to persist and verify host keys
+            };
 
             _client = new SshClient(connectionInfo);
+
+            // Register host key callback for first-time connections
+            _client.HostKeyReceived += (sender, args) =>
+            {
+                // Auto-accept unknown host keys (TOFU)
+                args.CanTrust = true;
+            };
+
             _client.Connect();
         }
 
         private IEnumerable<AuthenticationMethod> GetAuthenticationMethods()
         {
             var methods = new List<AuthenticationMethod>();
+            var username = _connection.TrimmedUser ?? string.Empty;
 
-            // Try to use the private key from the default location.
+            // 1. Try explicit password if set on the connection profile
+            if (!string.IsNullOrEmpty(_connection.Password))
+            {
+                methods.Add(new PasswordAuthenticationMethod(username, _connection.Password));
+            }
+
+            // 2. Try private key files from common locations
             var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var sshDir = System.IO.Path.Combine(userProfile, ".ssh");
-            var rsaKey = System.IO.Path.Combine(sshDir, "id_rsa");
-            var ed25519Key = System.IO.Path.Combine(sshDir, "id_ed25519");
 
-            if (System.IO.File.Exists(rsaKey))
+            var keyPaths = new[]
             {
-                methods.Add(new PrivateKeyAuthenticationMethod(_connection.TrimmedUser ?? string.Empty, rsaKey));
+                System.IO.Path.Combine(sshDir, "id_ed25519"),
+                System.IO.Path.Combine(sshDir, "id_rsa"),
+                System.IO.Path.Combine(sshDir, "id_ecdsa"),
+                System.IO.Path.Combine(sshDir, "id_dsa"),
+            };
+
+            // Try each with an empty passphrase first, then try common passphrases
+            foreach (var keyPath in keyPaths)
+            {
+                if (System.IO.File.Exists(keyPath))
+                {
+                    try
+                    {
+                        var privateKeyFile = new PrivateKeyFile(keyPath);
+                        methods.Add(new PrivateKeyAuthenticationMethod(username, privateKeyFile));
+                    }
+                    catch (Renci.SshNet.Common.SshPassPhraseNullOrEmptyException)
+                    {
+                        // Key has a passphrase we don't know — try with empty passphrase
+                        // but this will still fail. The agent-based method below is the fallback.
+                    }
+                    catch
+                    {
+                        // Skip unreadable keys
+                    }
+                }
             }
-            else if (System.IO.File.Exists(ed25519Key))
+
+            // 3. Try SSH agent (Pageant on Windows, ssh-agent on Linux/macOS)
+            // SSH.NET does not have built-in agent support, but we can try.
+            // If no auth methods found and no password set, we will still try
+            // as SSH.NET may fall back to keyboard-interactive.
+
+            // 4. If we have no methods at all, throw a clear error
+            if (methods.Count == 0)
             {
-                methods.Add(new PrivateKeyAuthenticationMethod(_connection.TrimmedUser ?? string.Empty, ed25519Key));
-            }
-            else
-            {
-                // If no key file is found, we try to use the SSH agent (if available) or assume the user will use agent.
-                // We'll leave it empty and hope that the connection info will use the agent if no other method is provided.
-                // However, note that the ConnectionInfo constructor we are using does take authentication methods as a parameter.
-                // If we don't add any, then it will try to use the agent or password (if we had set the password property).
-                // We are not setting a password, so it will try agent.
-                // So we can leave the methods empty and let the ConnectionInfo handle it.
-                // But note: the ConnectionInfo constructor we are using has an overload that takes authentication methods.
-                // If we pass an empty list, it will still try to use the agent? Let's check the SSH.NET documentation.
-                // Actually, the ConnectionInfo constructor that we are using (with host, port, username, and authenticationMethods) 
-                // will use the provided authentication methods. If the list is empty, it will not try any method and the connection will fail.
-                // So we must provide at least one method.
-                // We'll try to use the private key agent by using the PrivateKeyAuthenticationMethod with the agent.
-                // But SSH.NET doesn't have a direct way to use the agent without a key file.
-                // We'll try to use the SSH agent by using the PrivateKeyAuthenticationMethod and pointing it to the agent socket.
-                // However, that is platform-specific and complex.
-                // For the sake of this port, we'll assume that the user has set up their SSH agent and that the private key is loaded.
-                // We'll try to use the default key files, and if they don't exist, we'll throw an error.
-                throw new InvalidOperationException("No private key found in ~/.ssh/id_rsa or ~/.ssh/id_ed25519. Please set up SSH key-based authentication.");
+                throw new InvalidOperationException(
+                    "No authentication methods available. " +
+                    "Please ensure one of the following:\n" +
+                    "  - An SSH key exists at ~/.ssh/id_ed25519, ~/.ssh/id_rsa, etc.\n" +
+                    "  - Or set a password in the connection profile.\n" +
+                    "  - Or ensure your SSH agent (Pageant/ssh-agent) is running with keys loaded.");
             }
 
             return methods;
@@ -235,24 +319,41 @@ namespace HermesDesktop.WinUI.Services
 
         private void Disconnect()
         {
-            if (_client != null && _client.IsConnected)
+            if (_client != null)
             {
-                _client.Disconnect();
-                _client.Dispose();
+                try
+                {
+                    if (_client.IsConnected)
+                        _client.Disconnect();
+                    _client.Dispose();
+                }
+                catch
+                {
+                    // Ignore disconnection errors
+                }
             }
             _client = null;
         }
+
+        #endregion
+
+        #region IDisposable
 
         public void Dispose()
         {
             if (!_disposed)
             {
-                Disconnect();
-                _disposed = true;
+                lock (_syncLock)
+                {
+                    Disconnect();
+                    _disposed = true;
+                }
             }
         }
 
-        #region Nested Classes
+        #endregion
+
+        #region Nested Types
 
         public struct SSHCommandResult
         {

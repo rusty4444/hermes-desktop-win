@@ -24,6 +24,8 @@ namespace HermesDesktop.WinUI.ViewModels
         private string _newUser = string.Empty;
         private int? _newPort = null;
         private string _newHermesProfile = string.Empty;
+        private string _newPassword = string.Empty;
+        private string _newHermesHomePath = string.Empty;
 
         public SettingsViewModel()
         {
@@ -85,6 +87,18 @@ namespace HermesDesktop.WinUI.ViewModels
             set => SetField(ref _newHermesProfile, value);
         }
 
+        public string NewPassword
+        {
+            get => _newPassword;
+            set => SetField(ref _newPassword, value);
+        }
+
+        public string NewHermesHomePath
+        {
+            get => _newHermesHomePath;
+            set => SetField(ref _newHermesHomePath, value);
+        }
+
         /// <summary>
         /// Loads the connection profiles from the local storage.
         /// </summary>
@@ -128,7 +142,9 @@ namespace HermesDesktop.WinUI.ViewModels
                 Host = NewHost.Trim(),
                 User = NewUser.Trim(),
                 Port = NewPort,
-                HermesProfile = NewHermesProfile.Trim()
+                HermesProfile = NewHermesProfile.Trim(),
+                Password = NewPassword,
+                HermesHomePath = NewHermesHomePath.Trim()
             };
 
             IsLoading = true;
@@ -166,6 +182,8 @@ namespace HermesDesktop.WinUI.ViewModels
             SelectedProfile.User = NewUser.Trim();
             SelectedProfile.Port = NewPort;
             SelectedProfile.HermesProfile = NewHermesProfile.Trim();
+            SelectedProfile.Password = NewPassword;
+            SelectedProfile.HermesHomePath = NewHermesHomePath.Trim();
 
             IsLoading = true;
             ErrorMessage = string.Empty;
@@ -254,6 +272,8 @@ namespace HermesDesktop.WinUI.ViewModels
             NewUser = string.Empty;
             NewPort = null;
             NewHermesProfile = string.Empty;
+            NewPassword = string.Empty;
+            NewHermesHomePath = string.Empty;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

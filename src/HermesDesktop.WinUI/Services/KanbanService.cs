@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
+using HermesDesktop.WinUI.Models;
 
 namespace HermesDesktop.WinUI.Services
 {
@@ -22,11 +24,9 @@ namespace HermesDesktop.WinUI.Services
         public async Task<KanbanBoard> GetBoardAsync()
         {
             var pythonScript = @"
-import json
-import os
+import json, os, time
 
 def get_kanban_board():
-    # We assume the Kanban data is stored in ~/.hermes/kanban/board.json
     kanban_dir = os.path.expanduser('~/.hermes/kanban')
     board_path = os.path.join(kanban_dir, 'board.json')
     if not os.path.isfile(board_path):
@@ -43,8 +43,7 @@ if __name__ == '__main__':
     result = get_kanban_board()
     print(json.dumps(result))
 ";
-            var result = await _sshTransport.ExecuteJSONAsync<KanbanBoard>(pythonScript);
-            return result;
+            return await _sshTransport.ExecuteJSONAsync<KanbanBoard>(pythonScript);
         }
 
         /// <summary>
@@ -52,19 +51,21 @@ if __name__ == '__main__':
         /// </summary>
         public async Task CreateCardAsync(string laneId, string title, string description = null)
         {
-            var pythonScript = $@"
-import json
-import os
+            var pyLaneId = JsonSerializer.Serialize(laneId);
+            var pyTitle = JsonSerializer.Serialize(title);
+            var pyDesc = JsonSerializer.Serialize(description ?? "");
+            var pythonScript = @"
+import json, os, time
 
-lane_id = {json.dumps(laneId)}
-title = {json.dumps(title)}
-description = {json.dumps(description)}
+lane_id = " + pyLaneId + @"
+title = " + pyTitle + @"
+description = " + pyDesc + @"
 
 def create_card(lane_id, title, description):
     kanban_dir = os.path.expanduser('~/.hermes/kanban')
     board_path = os.path.join(kanban_dir, 'board.json')
+
     if not os.path.isfile(board_path):
-        # Initialize the board if it doesn't exist
         data = {'lanes': [], 'cards': []}
     else:
         try:
@@ -76,20 +77,16 @@ def create_card(lane_id, title, description):
     # Ensure the lane exists
     lane_exists = any(lane.get('id') == lane_id for lane in data.get('lanes', []))
     if not lane_exists:
-        # If the lane doesn't exist, we create it (or we could return an error)
-        # For simplicity, we'll just add the lane.
-        data.setdefault('lanes', []).append({'id': lane_id, 'title': lane_id, 'cards': []})
+        data.setdefault('lanes', []).append({'id': lane_id, 'title': lane_id})
 
-    # Create the card
     card = {
-        'id': 'card_' + str(int(os.time() * 1000)),  # Simple ID generation
+        'id': 'card_' + str(int(time.time() * 1000)),
         'title': title,
-        'description': description or '',
-        'lane_id': lane_id
+        'description': description,
+        'laneId': lane_id
     }
     data.setdefault('cards', []).append(card)
 
-    # Save the board
     os.makedirs(kanban_dir, exist_ok=True)
     with open(board_path, 'w') as f:
         json.dump(data, f, indent=2)
@@ -97,28 +94,39 @@ def create_card(lane_id, title, description):
 if __name__ == '__main__':
     create_card(lane_id, title, description)
 ";
-            await _sshTransport.ExecuteAsync(pythonScript);
+            var result = await _sshTransport.ExecuteAsync(pythonScript);
+            _sshTransport.ValidateSuccessfulExit(result);
         }
 
         /// <summary>
-        /// Updates a card (e.g., move to another lane, update title/description).
+        /// Updates a card (move to another lane, update title/description).
         /// </summary>
         public async Task UpdateCardAsync(string cardId, string laneId = null, string title = null, string description = null)
         {
-            var pythonScript = $@"
-import json
-import os
+            var pyCardId = JsonSerializer.Serialize(cardId);
+            var hasLane = laneId != null ? "True" : "False";
+            var pyLaneId = JsonSerializer.Serialize(laneId ?? "");
+            var hasTitle = title != null ? "True" : "False";
+            var pyTitle = JsonSerializer.Serialize(title ?? "");
+            var hasDesc = description != null ? "True" : "False";
+            var pyDesc = JsonSerializer.Serialize(description ?? "");
 
-card_id = {json.dumps(cardId)}
-lane_id = {json.dumps(laneId)} if {json.dumps(laneId != null)} else None
-title = {json.dumps(title)} if {json.dumps(title != null)} else None
-description = {json.dumps(description)} if {json.dumps(description != null)} else None
+            var pythonScript = @"
+import json, os
 
-def update_card(card_id, lane_id, title, description):
+card_id = " + pyCardId + @"
+has_lane = " + hasLane + @"
+lane_id = " + pyLaneId + @"
+has_title = " + hasTitle + @"
+title = " + pyTitle + @"
+has_desc = " + hasDesc + @"
+description = " + pyDesc + @"
+
+def update_card(card_id, lane_id, title, description, has_lane, has_title, has_desc):
     kanban_dir = os.path.expanduser('~/.hermes/kanban')
     board_path = os.path.join(kanban_dir, 'board.json')
     if not os.path.isfile(board_path):
-        return  # Nothing to update
+        return
 
     try:
         with open(board_path, 'r') as f:
@@ -126,43 +134,36 @@ def update_card(card_id, lane_id, title, description):
     except Exception:
         return
 
-    # Find the card
-    card = None
-    for c in data.get('cards', []):
-        if c.get('id') == card_id:
-            card = c
+    for card in data.get('cards', []):
+        if card.get('id') == card_id:
+            if has_lane:
+                card['laneId'] = lane_id
+            if has_title:
+                card['title'] = title
+            if has_desc:
+                card['description'] = description
             break
-    if card is None:
-        return  # Card not found
 
-    # Update the card
-    if lane_id is not None:
-        card['lane_id'] = lane_id
-    if title is not None:
-        card['title'] = title
-    if description is not None:
-        card['description'] = description
-
-    # Save the board
     with open(board_path, 'w') as f:
         json.dump(data, f, indent=2)
 
 if __name__ == '__main__':
-    update_card(card_id, lane_id, title, description)
+    update_card(card_id, lane_id, title, description, has_lane, has_title, has_desc)
 ";
-            await _sshTransport.ExecuteAsync(pythonScript);
+            var result = await _sshTransport.ExecuteAsync(pythonScript);
+            _sshTransport.ValidateSuccessfulExit(result);
         }
 
         /// <summary>
-        /// Deletes a card.
+        /// Deletes a card by ID.
         /// </summary>
         public async Task DeleteCardAsync(string cardId)
         {
-            var pythonScript = $@"
-import json
-import os
+            var pyCardId = JsonSerializer.Serialize(cardId);
+            var pythonScript = @"
+import json, os
 
-card_id = {json.dumps(cardId)}
+card_id = " + pyCardId + @"
 
 def delete_card(card_id):
     kanban_dir = os.path.expanduser('~/.hermes/kanban')
@@ -176,38 +177,16 @@ def delete_card(card_id):
     except Exception:
         return
 
-    # Remove the card
     data['cards'] = [c for c in data.get('cards', []) if c.get('id') != card_id]
 
-    # Save the board
     with open(board_path, 'w') as f:
         json.dump(data, f, indent=2)
 
 if __name__ == '__main__':
     delete_card(card_id)
 ";
-            await _sshTransport.ExecuteAsync(pythonScript);
+            var result = await _sshTransport.ExecuteAsync(pythonScript);
+            _sshTransport.ValidateSuccessfulExit(result);
         }
-    }
-
-    public class KanbanBoard
-    {
-        public List<KanbanLane> Lanes { get; set; } = new List<KanbanLane>();
-        public List<KanbanCard> Cards { get; set; } = new List<KanbanCard>();
-    }
-
-    public class KanbanLane
-    {
-        public string Id { get; set; }
-        public string Title { get; set; }
-        // We don't store the cards in the lane; we have a separate list of cards.
-    }
-
-    public class KanbanCard
-    {
-        public string Id { get; set; }
-        public string Title { get; set; }
-        public string Description { get; set; }
-        public string LaneId { get; set; }
     }
 }
