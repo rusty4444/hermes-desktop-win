@@ -1,0 +1,81 @@
+<Page
+    x:Class="HermesDesktop.WinUI.Views.WorkflowsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:HermesDesktop.WinUI.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="using:HermesDesktop.WinUI.ViewModels"
+    xmlns:models="using:HermesDesktop.WinUI.Models"
+    mc:Ignorable="d">
+
+    <Page.DataContext>
+        <viewmodels:WorkflowViewModel x:Name="ViewModel"/>
+    </Page.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Orientation="Horizontal" Margin="20">
+            <TextBlock Text="Workflows" Style="{ThemeResource TitleTextBlockStyle}" Margin="0,0,0,10"/>
+        </StackPanel>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" Margin="20">
+            <StackPanel>
+                <!-- Workflows List -->
+                <Border BorderBrush="{ThemeResource SystemControlForegroundBaseMediumBrush}" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Workflows" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,0,0,8"/>
+                        <ListView ItemsSource="{x:Bind ViewModel.Workflows, Mode=OneWay}"
+                                  SelectedItem="{x:Bind ViewModel.SelectedWorkflow, Mode=TwoWay}"
+                                  Margin="0,0,0,8">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="models:Workflow">
+                                    <StackPanel Margin="0,4,0,4">
+                                        <TextBlock Text="{x:Bind Title}" Style="{ThemeResource BodyTextBlockStyle}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{x:Bind HermesProfile}" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource SystemControlDisabledBaseMediumBrush}" Margin="0,2,0,0"/>
+                                        <TextBlock Text="{x:Bind CreatedAt, Converter={StaticResource DateTimeToStringConverter}}" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,2,0,0"/>
+                                        <TextBlock Text="Skills: {x:Bind SkillIds.Count}" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0" Spacing="8">
+                            <Button Content="New Workflow" Click="NewWorkflow_Click"/>
+                            <Button Content="Save" Click="SaveWorkflow_Click"/>
+                            <Button Content="Delete" Click="DeleteWorkflow_Click"/>
+                            <Button Content="Execute" Click="ExecuteWorkflow_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Workflow Details -->
+                <Border BorderBrush="{ThemeResource SystemControlForegroundBaseMediumBrush}" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Workflow Details" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="0,0,0,8"/>
+                        <TextBlock Text="(Select a workflow to view details)" Style="{ThemeResource BodyTextBlockStyle}" 
+                                   Visibility="{x:Bind ViewModel.SelectedWorkflow, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed}"/>
+                        <!-- We'll show the details when a workflow is selected -->
+                        <StackPanel Visibility="{x:Bind ViewModel.SelectedWorkflow, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Visible}">
+                            <TextBlock Text="Title:" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,4,0,0"/>
+                            <TextBox Text="{x:Bind ViewModel.SelectedWorkflow.Title, Mode=TwoWay}" Margin="0,0,0,8"/>
+                            <TextBlock Text="Hermes Profile:" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,4,0,0"/>
+                            <TextBox Text="{x:Bind ViewModel.SelectedWorkflow.HermesProfile, Mode=TwoWay}" Margin="0,0,0,8"/>
+                            <TextBlock Text="Initial Prompt:" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,4,0,0"/>
+                            <TextBox Text="{x:Bind ViewModel.SelectedWorkflow.InitialPrompt, Mode=TwoWay}" 
+                                     AcceptsReturn="True" Height="100" Margin="0,0,0,8"/>
+                            <TextBlock Text="Skills (comma-separated skill IDs):" Style="{ThemeResource CaptionTextBlockStyle}" Margin="0,4,0,0"/>
+                            <TextBox Text="{x:Bind ViewModel.SelectedWorkflow.SkillIds, Converter={StaticResource ListToStringConverter}, Mode=TwoWay}" 
+                                     Margin="0,0,0,8"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>
