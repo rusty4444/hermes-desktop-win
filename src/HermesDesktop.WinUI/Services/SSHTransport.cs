@@ -60,23 +60,14 @@ namespace HermesDesktop.WinUI.Services
 
             var command = _client.CreateCommand(remoteCommand);
 
-            if (standardInput != null && standardInput.Length > 0)
-            {
-                using (var inputStream = command.InputStream)
-                {
-                    await inputStream.WriteAsync(standardInput, 0, standardInput.Length);
-                    inputStream.Close();
-                }
-            }
-
-            // SSH.NET's Execute is synchronous, but we wrap in Task.Run
-            var result = await Task.Run(() => command.Execute());
+            // SSH.NET's Execute is synchronous, wrapped in Task.Run
+            var execResult = await Task.Run(() => command.Execute());
 
             return new SSHCommandResult
             {
-                StandardOutput = result.Result,
+                StandardOutput = execResult,
                 StandardError = command.Error,
-                ExitCode = command.ExitStatus
+                ExitCode = command.ExitStatus ?? -1
             };
         }
 
