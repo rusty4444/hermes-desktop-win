@@ -21,28 +21,31 @@ jobs:
 
       - name: Build
         id: build
-        continue-on-error: true
         run: |
-          dotnet build src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release --no-restore -v normal 2>&1 > build.log
-          $exitCode = $LASTEXITCODE
-          Write-Host "=== build.log (last 200 lines) ==="
-          Get-Content build.log | Select-Object -Last 200
-          exit $exitCode
+          $result = dotnet build src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release --no-restore -v detailed 2>&1
+          $result | Out-File -FilePath build-detailed.log -Encoding utf8
+          # Extract XAML-specific errors
+          Write-Host "=== XAML Errors ==="
+          $result | Select-String -Pattern "XamlCompiler|error XM|error MC|error XC|error VAL|MarkupComp" -SimpleMatch | ForEach-Object { $_.Line }
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Build failed with exit code $LASTEXITCODE"
+            exit 1
+          }
         shell: pwsh
 
       - name: Publish
-        if: steps.build.outcome == 'success'
+        if: success()
         run: dotnet publish src/HermesDesktop.WinUI/HermesDesktop.WinUI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
 
       - name: Upload artifact
-        if: steps.build.outcome == 'success'
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: HermesDesktop.WinUI
           path: publish/
 
       - name: Upload to Release
-        if: steps.build.outcome == 'success' && startsWith(github.ref, 'refs/tags/v')
+        if: success() && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: publish/HermesDesktop.WinUI.exe
