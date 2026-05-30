@@ -23,6 +23,16 @@ namespace HermesDesktop.WinUI
                 File.AppendAllText(
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "hermes_debug.txt"),
                     "MainWindow created\n");
+                
+                // Set window size explicitly
+                IntPtr hwnd = WinRT.Interop.WindowNative.GetWindowHandle(m_window);
+                var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
+                var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(windowId);
+                appWindow.Resize(new Windows.Graphics.SizeInt32(1200, 800));
+
+                File.AppendAllText(
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "hermes_debug.txt"),
+                    $"Window resized, hwnd={hwnd}\n");
 
                 m_window.Activate();
                 File.AppendAllText(
