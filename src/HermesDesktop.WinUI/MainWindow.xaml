@@ -18,44 +18,74 @@
             <NavigationView.MenuItems>
                 <NavigationViewItem x:Name="OverviewItem"
                                     Content="Overview"
-                                    Icon="Home"
-                                    Tag="overview"/>
+                                    Tag="overview">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Home"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Name="ChatItem"
                                     Content="Chat"
-                                    Icon="Message"
-                                    Tag="chat"/>
+                                    Tag="chat">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Message"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Name="SessionsItem"
                                     Content="Sessions"
-                                    Icon="Chat"
-                                    Tag="sessions"/>
+                                    Tag="sessions">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Comment"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Name="WorkflowsItem"
                                     Content="Workflows"
-                                    Icon="Repeat"
-                                    Tag="workflows"/>
+                                    Tag="workflows">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="RepeatAll"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Name="CronJobsItem"
                                     Content="Cron Jobs"
-                                    Icon="Calendar"
-                                    Tag="cronjobs"/>
+                                    Tag="cronjobs">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Calendar"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Name="KanbanItem"
                                     Content="Kanban"
-                                    Icon="Preview"
-                                    Tag="kanban"/>
+                                    Tag="kanban">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Preview"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Name="FilesItem"
                                     Content="Files"
-                                    Icon="Folder"
-                                    Tag="files"/>
+                                    Tag="files">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Folder"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Name="UsageItem"
                                     Content="Usage"
-                                    Icon="Chart"
-                                    Tag="usage"/>
+                                    Tag="usage">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="BarChart4"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Name="SkillsItem"
                                     Content="Skills"
-                                    Icon="Library"
-                                    Tag="skills"/>
+                                    Tag="skills">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Library"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Name="TerminalItem"
                                     Content="Terminal"
-                                    Icon="Console"
-                                    Tag="terminal"/>
+                                    Tag="terminal">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="CommandPrompt"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
 
             <NavigationView.Content>
