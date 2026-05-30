@@ -25,7 +25,6 @@ namespace HermesDesktop.WinUI
         [STAThread]
         static void Main(string[] args)
         {
-            // Initialize Windows App Runtime from bundled DLLs
             var options = new MddBootstrapInitializeOptions
             {
                 AutoInitialize = false,
@@ -33,22 +32,11 @@ namespace HermesDesktop.WinUI
             };
 
             int hr = MddBootstrapInitialize2(0x00010005, null, options, out _);
-            if (hr != 0)
-                hr = MddBootstrapInitialize2(0x00010004, null, options, out _);
-            if (hr != 0)
-                hr = MddBootstrapInitialize2(0x00010003, null, options, out _);
+            if (hr != 0) hr = MddBootstrapInitialize2(0x00010004, null, options, out _);
+            if (hr != 0) hr = MddBootstrapInitialize2(0x00010003, null, options, out _);
 
-            if (hr != 0 && hr != -2003309301) // -2003309301 = already initialized
-            {
-                System.Diagnostics.Debug.WriteLine($"Bootstrap failed: 0x{hr:X8}");
-            }
-
-            WinRT.ComWrappersSupport.InitializeComWrappers();
             Application.Start((p) =>
             {
-                var context = new Microsoft.UI.Dispatching.DispatcherQueueSynchronizationContext(
-                    Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
-                System.Threading.SynchronizationContext.SetSynchronizationContext(context);
                 new App();
             });
         }

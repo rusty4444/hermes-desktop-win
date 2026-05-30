@@ -1,4 +1,6 @@
 using Microsoft.UI.Xaml;
+using System;
+using System.IO;
 
 namespace HermesDesktop.WinUI
 {
@@ -11,8 +13,18 @@ namespace HermesDesktop.WinUI
 
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            m_window = new MainWindow();
-            m_window.Activate();
+            try
+            {
+                m_window = new MainWindow();
+                m_window.Activate();
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "hermes_error.txt"),
+                    ex.ToString());
+                throw;
+            }
         }
 
         private MainWindow m_window;
