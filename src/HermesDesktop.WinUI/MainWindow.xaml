@@ -7,13 +7,19 @@
     mc:Ignorable="d"
     Title="Hermes Desktop">
 
-    <NavigationView x:Name="NavView"
-                    IsPaneOpen="True"
-                    PaneDisplayMode="Left"
-                    IsSettingsVisible="True">
-        <NavigationView.MenuItems>
-            <NavigationViewItem Content="Overview" Tag="overview"/>
-        </NavigationView.MenuItems>
-        <Frame x:Name="ContentFrame"/>
-    </NavigationView>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <ListBox x:Name="NavList" Grid.Column="0"
+                 SelectionChanged="NavList_SelectionChanged">
+            <ListBoxItem Content="Overview" Tag="overview"/>
+            <ListBoxItem Content="Chat" Tag="chat"/>
+            <ListBoxItem Content="Sessions" Tag="sessions"/>
+            <ListBoxItem Content="Files" Tag="files"/>
+            <ListBoxItem Content="Settings" Tag="settings"/>
+        </ListBox>
+        <Frame x:Name="ContentFrame" Grid.Column="1"/>
+    </Grid>
 </Window>
