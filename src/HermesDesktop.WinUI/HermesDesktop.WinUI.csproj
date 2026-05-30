@@ -12,6 +12,7 @@
     <WindowsAppSdkBootstrapInitialize>true</WindowsAppSdkBootstrapInitialize>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <PlatformTarget>x64</PlatformTarget>
+    <DisableXamlGeneratedMain>true</DisableXamlGeneratedMain>
   </PropertyGroup>
 
   <ItemGroup>
