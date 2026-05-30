@@ -7,10 +7,13 @@
     mc:Ignorable="d"
     Title="Hermes Desktop">
 
-    <Grid>
-        <TextBlock Text="Hermes Desktop"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   FontSize="24"/>
-    </Grid>
+    <NavigationView x:Name="NavView"
+                    IsPaneOpen="True"
+                    PaneDisplayMode="Left"
+                    IsSettingsVisible="True">
+        <NavigationView.MenuItems>
+            <NavigationViewItem Content="Overview" Tag="overview"/>
+        </NavigationView.MenuItems>
+        <Frame x:Name="ContentFrame"/>
+    </NavigationView>
 </Window>
