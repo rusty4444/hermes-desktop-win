@@ -1,19 +1,22 @@
 using Microsoft.UI.Xaml;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
+using System;
+using System.Runtime.InteropServices;
 
 namespace HermesDesktop.WinUI
 {
-    /// <summary>
-    /// Provides application-specific behavior to supplement the default Application class.
-    /// </summary>
     public partial class App : Application
     {
-        /// <summary>
-        /// Initializes the singleton application object.  This is the first line of authored code
-        /// executed, and as such is the logical equivalent of main() or WinMain().
-        /// </summary>
+        [DllImport("Microsoft.WindowsAppRuntime.Bootstrap.dll", CharSet = CharSet.Unicode)]
+        private static extern int MddBootstrapInitialize(uint majorMinorVersion, string versionTag, IntPtr minVersion);
+
+        static App()
+        {
+            // Initialize Windows App Runtime bootstrapper for self-contained deployment
+            int hr = MddBootstrapInitialize(0x00010005, null, IntPtr.Zero);
+            if (hr != 0) hr = MddBootstrapInitialize(0x00010004, null, IntPtr.Zero);
+            if (hr != 0) hr = MddBootstrapInitialize(0x00010003, null, IntPtr.Zero);
+        }
+
         public App()
         {
             this.InitializeComponent();
