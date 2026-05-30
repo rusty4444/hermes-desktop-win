@@ -6,11 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Title="Hermes Desktop"
-    Width="1200"
-    Height="800"
-    MinWidth="800"
-    MinHeight="600">
+    Title="Hermes Desktop">
 
     <Grid>
         <NavigationView x:Name="NavView"

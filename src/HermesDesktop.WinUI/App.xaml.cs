@@ -15,15 +15,25 @@ namespace HermesDesktop.WinUI
         {
             try
             {
+                File.WriteAllText(
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "hermes_debug.txt"),
+                    $"OnLaunched fired at {DateTime.Now}\n");
+
                 m_window = new MainWindow();
+                File.AppendAllText(
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "hermes_debug.txt"),
+                    "MainWindow created\n");
+
                 m_window.Activate();
+                File.AppendAllText(
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "hermes_debug.txt"),
+                    "Window activated\n");
             }
             catch (Exception ex)
             {
                 File.WriteAllText(
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "hermes_error.txt"),
                     ex.ToString());
-                throw;
             }
         }
 
